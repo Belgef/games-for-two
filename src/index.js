@@ -2,16 +2,42 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import reportWebVitals from './reportWebVitals';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {TicTacToe, TicTacToeLobby, TicTacToeCreateRoom, TicTacToeJoinRoom} from "./TicTacToe";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter><Routes>
+      <Route path="/" element={<App />}>
+        <Route index element={<Home />} />
+        <Route path="tic-tac-toe">
+          <Route index element={<TicTacToeLobby />} />
+          <Route path='create' element={<TicTacToeCreateRoom />} />
+          <Route path='join'>
+            <Route path=':id' element={<TicTacToeJoinRoom />} />
+          </Route>
+        </Route>
+        <Route path="bulls-and-cows" element={<BullsCows />} />
+        <Route path="hangman" element={<Hangman />} />
+      </Route>
+    </Routes>
+    </BrowserRouter>
   </React.StrictMode>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+function BullsCows() {
+  return (
+    <h1>Bulls & Cows</h1>
+  )
+}
+function Hangman() {
+  return (
+    <h1>Hangman</h1>
+  )
+}
+function Home() {
+  return (
+    <h1>Home</h1>
+  )
+}
