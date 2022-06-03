@@ -11,3 +11,79 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.amy-crisp-gradient {
+  background-image: linear-gradient(120deg,#a6c0fe 0,#f68084 100%);
+}
+.winter-neva-gradient {
+  background-image: linear-gradient(120deg,#a1c4fd 0,#c2e9fb 100%);
+}
+
+@font-face {
+  font-family: exo;
+  src: url("../fonts/Exo-VariableFont_wght.ttf");
+}
+
+@font-face {
+  font-family: baumans;
+  src: url("../fonts/Baumans-Regular.ttf");
+}
+
+.font-exo{
+  font-family: exo;
+}
+.font-baumans{
+  font-family: baumans;
+}
+
+.wrapper {
+  display: grid;
+  grid-template-columns: 55px 55px 55px;
+  grid-template-rows: 55px 55px 55px;
+}
+
+.tic-tac-toe-button{
+  width: 50px;
+  height: 50px;
+  border: none;
+  border-radius: 6px;
+  background-color: #ffffff7f;
+  padding: 0;
+}
+
+.tic-tac-toe-button:hover{
+  background-color: #ffffffc6;
+}
+
+.center {
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+.title-center{
+  margin: 0;
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+.tic-tac-toe-img{
+  width: 75%;
+  height: 75%;
+}
+
+.tic-tac-toe-game-buttons{
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.narrow{
+  height: 1.6rem;
+}
