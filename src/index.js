@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import {TicTacToe, TicTacToeLobby, TicTacToeCreateRoom, TicTacToeJoinRoom} from "./TicTacToe";
+import { TicTacToeLobby, TicTacToeHostRoom, TicTacToeJoinRoom } from "./TicTacToe";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -13,10 +13,11 @@ root.render(
         <Route index element={<Home />} />
         <Route path="tic-tac-toe">
           <Route index element={<TicTacToeLobby />} />
-          <Route path='create' element={<TicTacToeCreateRoom />} />
-          <Route path='join'>
+          <Route path='host' element={<TicTacToeHostRoom />} />
+          <Route path='room'>
             <Route path=':id' element={<TicTacToeJoinRoom />} />
           </Route>
+          <Route path=':id' element={<TicTacToeLobby />} />
         </Route>
         <Route path="bulls-and-cows" element={<BullsCows />} />
         <Route path="hangman" element={<Hangman />} />
