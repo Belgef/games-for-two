@@ -21,7 +21,7 @@ export function TicTacToeLobby() {
 
         <div className="tic-tac-toe-game-buttons">
           {room.id === undefined ? (
-            <button className="btn btn-primary font-baumans btn-sm" style={{ margin: "0 1rem" }} onClick={() => navigate(`${location.pathname + (location.pathname.endsWith('/') ? '' : '/')}create?username=${username}`)}>Create Room</button>
+            <button className="btn btn-primary font-baumans btn-sm" style={{ margin: "0 1rem" }} onClick={() => navigate(`${location.pathname + (location.pathname.endsWith('/') ? '' : '/')}host?username=${username}`)}>Create Room</button>
           ) : (
             <button onClick={() => navigate(`/tic-tac-toe/room/${room.id}?username=${username}`)} className="btn btn-primary font-baumans btn-sm" style={{ margin: "0 1rem" }}>Join Room</button>
           )}
@@ -38,6 +38,8 @@ export function TicTacToeHostRoom() {
   if (window.MyData === undefined) {
     let MyData = {};
     window.MyData = MyData;
+    MyData.X = true;
+    MyData.getX = () => { MyData.X = !MyData.X;console.log(MyData.X); return MyData.X };
     MyData.room = uuidv1();
     MyData.joinUrl = window.location.host + '/tic-tac-toe/' + MyData.room;
     MyData.socket = socket();
@@ -45,9 +47,13 @@ export function TicTacToeHostRoom() {
     MyData.socket.on('message', message => console.log(message));
     window.addEventListener('beforeunload', () => MyData.socket.disconnect())
   }
-  window.MyData.socket.on('new', name => setPlayerList(playerList.concat(name)));
-  window.MyData.socket.on('getdata', id => window.MyData.socket.emit('sendData', id, username, playerList));
+  window.MyData.socket.once('new', name => setPlayerList(playerList.concat(name)));
+  window.MyData.socket.once('getdata', id => window.MyData.socket.emit('sendData', id, username, playerList));
 
+  let [gameStarted, setGameStarted] = useState(false)
+  if (gameStarted) {
+    return (<TicTacToe X={window.MyData.X} host={true} finish={() => { setGameStarted(false); window.MyData.socket.emit('setGame', window.MyData.room, false);window.MyData.X = !window.MyData.X }} />)
+  }
   return (
     <div className="card center" style={{ width: "28rem" }}>
       <div className="card-body">
@@ -89,7 +95,10 @@ export function TicTacToeHostRoom() {
         </center>
 
         <div className="tic-tac-toe-game-buttons">
-          <button className="btn btn-primary btn-sm font-baumans" style={{ margin: "0 1rem" }}>Start Game</button>
+          <button className="btn btn-primary btn-sm font-baumans" style={{ margin: "0 1rem" }} onClick={() => {
+            window.MyData.socket.emit('setGame', window.MyData.room, true);
+            setGameStarted(true);
+          }} disabled={playerList.length !== 2}>Start Game</button>
         </div>
       </div>
     </div>
@@ -126,17 +135,27 @@ export function TicTacToeJoinRoom() {
   if (window.MyData === undefined) {
     let MyData = {};
     window.MyData = MyData;
+    MyData.X = false;
+    MyData.room = params.id;
     MyData.socket = socket();
     MyData.socket.emit('join', params.id, username);
     MyData.socket.on('message', message => console.log(message));
     window.addEventListener('beforeunload', (event) => MyData.socket.disconnect())
   }
   let [success, setSuccess] = useState(true)
-  window.MyData.socket.on('sendCheck', permitted => setSuccess(permitted));
-  window.MyData.socket.on('sendData', (hostName, players) => { setHost(hostName); setPlayerList(players) });
-  window.MyData.socket.on('new', name => setPlayerList(playerList.concat(name)));
-  if(!success)
-    return(<center><h3 className="card-title font-baumans mt-5" style={{ fontWeight: "bold" }}>Sorry, this room is unavailable</h3></center>)
+  let [gameStarted, setGameStarted] = useState(false)
+  window.MyData.socket.removeAllListeners("sendCheck");
+  window.MyData.socket.removeAllListeners("sendData");
+  window.MyData.socket.removeAllListeners("new");
+  window.MyData.socket.removeAllListeners("setGame");
+  window.MyData.socket.once('sendCheck', permitted => setSuccess(permitted));
+  window.MyData.socket.once('sendData', (hostName, players) => { setHost(hostName); setPlayerList(players.concat(username)) });
+  window.MyData.socket.once('new', name => setPlayerList(playerList.concat(name)));
+  window.MyData.socket.once('setGame', (state) => {setGameStarted(state); if(state===false)window.MyData.X = !window.MyData.X});
+  if (!success)
+    return (<center><h3 className="card-title font-baumans mt-5" style={{ fontWeight: "bold" }}>Sorry, this room is unavailable</h3></center>)
+  else if (gameStarted)
+    return (<TicTacToe X={window.MyData.X} host={false} />)
   return (
     <div className="card center" style={{ width: "28rem" }}>
       <div className="card-body">
@@ -172,53 +191,80 @@ export function TicTacToeJoinRoom() {
   );
 }
 
+export function TicTacToe(props) {
+  let [grid, setGrid] = useState([...Array(3)].map(e => Array(3).fill('')))
+  let [enabled, setEnabled] = useState(props.X)
+  let [win, setWin] = useState(['', 0]), [loose, setLoose] = useState(['', 0])
+  window.MyData.socket.removeAllListeners("move");
+  window.MyData.socket.once('move', (i, j) => {
+    var newgrid = grid;
+    console.log('setting', i, j, props.X)
+    newgrid[i][j] = (!props.X) ? 'X' : 'O';
+    setGrid(newgrid)
+    setLoose(checkResult(grid, (!props.X) ? 'X' : 'O'))
+    setEnabled(true)
+  })
+  var rows = grid.map((item, i) => {
+    var entry = item.map((element, j) => {
+      return (
+        <td key={j} ><button onClick={() => {
+          var newgrid = grid;
+          console.log('setting', i, j, props.X)
+          newgrid[i][j] = (props.X) ? 'X' : 'O';
+          setGrid(newgrid)
+          window.MyData.socket.emit("move", i, j, window.MyData.room)
+          setWin(checkResult(grid, (props.X) ? 'X' : 'O'))
+          setEnabled(false)
+        }} disabled={!enabled || win[0] !== '' || loose[0] !== '' || element !== ''}>{element}</button></td>
+      );
+    });
+    return (
+      <tr key={i}>{entry}</tr>
+    );
+  });
+  return (
+    <div>
+      <table>
+        <tbody>
+          {rows}
+        </tbody>
+      </table>
+      {(win[0] !== '' || loose[0] !== '') ?
+        <div>
+          <p>{(win[0] === 'D' || loose[0] === 'D') ? 'Draw! ' : (win[0] !== '') ? 'You win! ' + win : 'You lost ' + loose}</p>
+          {(props.host) ? <button onClick={() => props.finish()}>Return to lobby</button> : null}
+        </div>
+        : null}
+    </div>
+  )
+}
 
-
-
-
-
-
-
-
-
-
-/*
-
-export class TicTacToe extends React.Component {
-    constructor(props) {
-        super(props);
-        this.makeMove = this.makeMove.bind(this);
-        this.state = { 
-            grid: [...Array(3)].map(e => Array(3).fill('')),
-
-        };
+function checkResult(grid, player) {
+  for (let i = 0; i < 3; i++) {
+    let columnWin = true, rowWin = true;
+    for (let j = 0; j < 3; j++) {
+      if (columnWin === true && grid[i][j] !== player)
+        columnWin = false
+      if (rowWin === true && grid[j][i] !== player)
+        rowWin = false
     }
-
-    makeMove(i, j, send=false) {
-        var newgrid = this.state.grid;
-        //newgrid[i][j]=((!first&&send)||(first&&!send))?'X':'O';
-        this.setState({ grid: newgrid })
-        //if(send)
-        //    socket.emit("move", i + ' ' + j)
-    }
-
-    render() {
-        var rows = this.state.grid.map((item, i) => {
-            var entry = item.map((element, j) => {
-                return (
-                    <td key={j} ><button onClick={()=>this.makeMove(i, j, true)}>{element}</button></td>
-                );
-            });
-            return (
-                <tr key={i}>{entry}</tr>
-            );
-        });
-        return (
-            <table>
-                <tbody>
-                    {rows}
-                </tbody>
-            </table>
-        );
-    }
-}*/
+    if (columnWin)
+      return ['R', i + 1]
+    else if (rowWin)
+      return ['C', i + 1]
+  }
+  let mDiagWin = true, aDiagWin = true;
+  for (let i = 0; i < 3; i++) {
+    if (mDiagWin === true && grid[i][i] !== player)
+      mDiagWin = false
+    if (aDiagWin === true && grid[i][2 - i] !== player)
+      aDiagWin = false
+  }
+  if (mDiagWin)
+    return ['MD', 0]
+  else if (aDiagWin)
+    return ['AD', 0]
+  if (grid.every(r => r.every(c => c !== '')))
+    return ['D', 0]
+  return ['', 0]
+}
